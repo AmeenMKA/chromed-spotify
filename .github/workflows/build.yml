@@ -1,0 +1,63 @@
+name: Auto-merge Spotify with Eevee and Chroma
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Automatically checks for updates every 24 hours
+  workflow_dispatch: # Allows you to trigger the build manually at any time
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq wget curl unzip
+
+      - name: Fetch SideloadLabs unpatched IPA
+        id: fetch_base
+        run: |
+          # Grabs the specific unpatched download URL directly from your source JSON
+          DOWNLOAD_URL=$(curl -s "https://githubusercontent.com" | jq -r '.apps[] | select(.name=="EeveeSpotifyReincarnated") | .downloadURL')
+          VERSION=$(curl -s "https://githubusercontent.com" | jq -r '.apps[] | select(.name=="EeveeSpotifyReincarnated") | .version')
+          
+          echo "DOWNLOADING: $DOWNLOAD_URL (v$VERSION)"
+          wget -O eevee_spotify.ipa "$DOWNLOAD_URL"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Fetch latest Chroma release deb
+        id: fetch_chroma
+        run: |
+          # Inspects GitHub API to download the latest compiled debian package for Chroma
+          CHROMA_DEB_URL=$(curl -s "https://github.com" | jq -r '.assets[] | select(.name | endswith(".deb")) | .browser_download_url' | head -n 1)
+          
+          if [ -z "$CHROMA_DEB_URL" ] || [ "$CHROMA_DEB_URL" = "null" ]; then
+            # Fallback if no deb asset is attached directly
+            CHROMA_DEB_URL="https://chroma.pw/patch" 
+          fi
+          
+          echo "Chroma Package URL: $CHROMA_DEB_URL"
+          wget -O chroma.deb "$CHROMA_DEB_URL" || echo "Need manual extraction from web patcher"
+
+      - name: Install and configure Azule
+        run: |
+          git clone https://github.com
+          sudo ln -sf "$PWD/Azule/azule" /usr/local/bin/azule
+
+      - name: Inject Chroma tweak into EeveeSpotify IPA
+        run: |
+          # Combines the visual redesign dylib from the deb package into the unpatched Spotify binary
+          azule -i eevee_spotify.ipa -o chroma_eevee_spotify.ipa -f chroma.deb
+
+      - name: Create release and upload compiled IPA
+        uses: softprops/action-gh-release@v2
+        with:
+          files: chroma_eevee_spotify.ipa
+          tag_name: v${{ steps.fetch_base.outputs.version }}
+          name: "Spotify v${{ steps.fetch_base.outputs.version }} + Chroma"
+          body: "Automated bundle compilation mixing unpatched EeveeSpotify with the latest public Chroma tweak mod."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
