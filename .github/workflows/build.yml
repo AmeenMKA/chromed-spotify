@@ -61,3 +61,18 @@ jobs:
           body: "Automated bundle compilation mixing unpatched EeveeSpotify with the latest public Chroma tweak mod."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Update apps.json version and commit
+        run: |
+          # 1. Read the new version from the previous step and inject it into apps.json
+          NEW_VER="${{ steps.fetch_base.outputs.version }}"
+          jq --arg ver "$NEW_VER" '.apps[0].version = $ver' apps.json > temp.json && mv temp.json apps.json
+
+          # 2. Configure Git to push the changes back to your repository
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 3. Commit and push the file change
+          git add apps.json
+          git commit -m "Auto-update apps.json to version v$NEW_VER [skip ci]"
+          git push
