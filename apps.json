@@ -1,0 +1,17 @@
+{
+  "name": "chromed-spotify",
+  "identifier": "com.AmeenMKA.source",
+  "subtitle": "EeveeSpotify with Chroma Redesign",
+  "apps": [
+    {
+      "name": "ChromaEeveeSpotify",
+      "bundleIdentifier": "com.spotify.client",
+      "developerName": "SideloadLabs & Chroma",
+      "downloadURL": "https://github.com/AmeenMKA/chromed-spotify/releases/latest/download/chroma_eevee_spotify.ipa",
+      "iconURL": "https://catbox.moe/9fgova.JPG",
+      "localizedDescription": "Unpatched EeveeSpotify matched with Chroma visual engine layouts.",
+      "tintColor": "1DB954",
+      "version": "9.1.88"
+    }
+  ]
+}
